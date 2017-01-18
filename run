@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+require 'shell'
+
+# We'll use "du" to get the as-the-OS-sees-it definition of disk usage.
+def parse_du_total stdout
+  stdout.lines.last.split.first.to_i
+end
+
+def repository_size
+  parse_du_total `du -c .git`
+end
+
+def working_directory_size
+  parse_du_total `du -c ./*`
+end
+
+def get_bytes size
+  `cat /dev/random | head -c #{size}`
+end
+
+def commit_all
+  `git add . && git commit -m "Checkpoint."`
+end
+
+# Usage: ./run [COUNT] [SIZE] [CHANGES]
+count = $*[0].to_i
+size = $*[1].to_i
+changes = $*[2].to_i
+
+puts "Before:"
+puts "Repostory size: #{repository_size}"
+puts "Working directory size: #{working_directory_size}"
+
+changes.times do
+  count.times do |idx|
+    IO.write("binaries/#{idx}.dat", get_bytes(size))
+  end
+  commit_all
+end
+
+puts "After:"
+puts "Repostory size: #{repository_size}"
+puts "Working directory size: #{working_directory_size}"
