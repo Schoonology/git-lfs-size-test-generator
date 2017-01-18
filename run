@@ -63,9 +63,4 @@ argv = {
   :cycles => $*[2].to_i,
 }
 validate_argv argv
-
-reset_repo "no-lfs"
-puts run_test(argv).inspect
-reset_repo "lfs"
-puts run_test(argv).inspect
-reset_repo "master"
+run_test(argv)
