@@ -18,26 +18,54 @@ def get_bytes size
   `cat /dev/random | head -c #{size}`
 end
 
-def commit_all
+def generate_binary size, name
+  bytes = get_bytes size
+  IO.write "binaries/#{name}.dat", bytes
+end
+
+def commit_changes
   `git add . && git commit -m "Checkpoint."`
 end
 
-# Usage: ./run [COUNT] [SIZE] [CHANGES]
-count = $*[0].to_i
-size = $*[1].to_i
-changes = $*[2].to_i
-
-puts "Before:"
-puts "Repostory size: #{repository_size}"
-puts "Working directory size: #{working_directory_size}"
-
-changes.times do
-  count.times do |idx|
-    IO.write("binaries/#{idx}.dat", get_bytes(size))
-  end
-  commit_all
+def reset_repo ref
+  `git co #{ref} && git gc`
 end
 
-puts "After:"
-puts "Repostory size: #{repository_size}"
-puts "Working directory size: #{working_directory_size}"
+def run_test **options
+  initial = {
+    :repo => repository_size,
+    :working => working_directory_size,
+  }
+
+  options[:cycles].times do
+    options[:count].times do |idx|
+      generate_binary options[:size], idx
+    end
+    commit_changes
+  end
+
+  {
+    :repo => repository_size - initial[:repo],
+    :working => working_directory_size - initial[:working],
+  }
+end
+
+def validate_argv argv
+  raise "Count argument is required." unless argv[:count].is_a? Integer
+  raise "Size argument is required." unless argv[:size].is_a? Integer
+  raise "Cycles argument is required." unless argv[:cycles].is_a? Integer
+end
+
+# Usage: ./run COUNT SIZE CYCLES
+argv = {
+  :count => $*[0].to_i,
+  :size => $*[1].to_i,
+  :cycles => $*[2].to_i,
+}
+validate_argv argv
+
+reset_repo "no-lfs"
+puts run_test(argv).inspect
+reset_repo "lfs"
+puts run_test(argv).inspect
+reset_repo "master"
